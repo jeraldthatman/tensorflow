@@ -1,16 +1,27 @@
-def prep_df(df):
+import numpy as np 
+import pandas as pd 
+from sklearn import preprocessing
+from collections import deque
 
-    from sklearn import preprocessing
-    from collections import deque
-    
+def classify(current, future):
+    if float(future) >float(current):
+        return 1
+    else:
+        return 0
+
+def shift_target(df, stock, seq_len, future_pred):
+    df = df[[f"Close_{stock}", f"Volume_{stock}"]].copy()
+    df['future'] = df[f"Close_{stock}"].shift(-future_pred) # Shifting the Price Variable, (From the most recent) 
+    df['target'] = list(map(classify,df[f"Close_{stock}"],df['future'])) # Classifying Current Price with Future Price (Lagged Vs. Current)
+    return df
+
+def prep_df(df, seq_len):
     df = df.drop('future',axis=1)
-        # Shifting the target variable 3 days ahead
-
     for col in df.columns:
         if col != "target":
             df[col] = df[col].pct_change() # gets the percent change 
             df.dropna(inplace=True)
-            df[col] = preprocessing.scale(df[col].values)
+            df[col] = preprocessing.scale(df[col].values) # Scaling the data. 
     df.dropna(inplace=True)
 
     seq_data = []
@@ -47,5 +58,6 @@ def prep_df(df):
     for seq, target in seq_data:
         X.append(seq)
         y.append(target)
-    
-    return(np.array(X),np.array(y))
+    X, y = np.array(X),np.array(y)
+    print('Train Shape: ', X.shape, 'Target Shape: ', y.shape)
+    return(X,y)
